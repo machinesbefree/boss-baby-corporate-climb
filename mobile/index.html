@@ -599,9 +599,29 @@
                 this.y = y;
                 this.radius = 22;
                 this.state = "working";
-                this.distractionTimer = 0;
+                this.distractionTimer = this.getNextDistractionDelay(true);
                 this.workEmojis = ["💻", "📝", "📊"];
                 this.currentWorkEmoji = this.workEmojis[0];
+            }
+
+            getNextDistractionDelay(initial = false) {
+                const baseDelay = Math.max(13000, 20000 - (day - 1) * 900);
+                const variance = 7000;
+                const delay = Math.max(5000, baseDelay + (Math.random() * variance * 2 - variance));
+                return initial ? Math.random() * delay : delay;
+            }
+
+            getRetryDelay() {
+                return 2500 + Math.random() * 2500;
+            }
+
+            distract(silent = false) {
+                if (this.state !== "working") return;
+                const distractions = ["playing", "sleeping", "crying"];
+                this.state = distractions[Math.floor(Math.random() * distractions.length)];
+                if (!silent) {
+                    particles.push(new Particle(this.x, this.y - 22, "Distracted!", "#ef4444"));
+                }
             }
 
             update(deltaTime) {
@@ -615,13 +635,11 @@
                     }
 
                     if (this.distractionTimer <= 0) {
-                        if (Math.random() < 0.00195 * day) {
-                            const distractions = ["playing", "sleeping", "crying"];
-                            this.state = distractions[Math.floor(Math.random() * distractions.length)];
-                            particles.push(new Particle(this.x, this.y - 22, "Distracted!", "#ef4444"));
+                        if (getDistractedWorkerCount() < getIssueCap()) {
+                            this.distract();
+                        } else {
+                            this.distractionTimer = this.getRetryDelay();
                         }
-
-                        this.distractionTimer = 1000 + Math.random() * 2000;
                         this.currentWorkEmoji = this.workEmojis[Math.floor(Math.random() * this.workEmojis.length)];
                     }
                 } else {
@@ -668,7 +686,7 @@
             fix() {
                 if (this.state !== "working") {
                     this.state = "working";
-                    this.distractionTimer = 3200;
+                    this.distractionTimer = Math.max(5000, this.getNextDistractionDelay() * 0.5);
                     particles.push(new Particle(this.x, this.y - 22, "Back to Work!", "#10b981"));
                     productivity = Math.min(100, productivity + 6);
                 }
@@ -725,6 +743,23 @@
                     workers.push(new Worker(x, y));
                 }
             }
+        }
+
+        function getDistractedWorkerCount() {
+            return workers.filter((worker) => worker.state !== "working").length;
+        }
+
+        function getIssueCap() {
+            return Math.max(2, Math.min(5, Math.floor(workers.length * 0.14) + Math.floor((day - 1) / 2)));
+        }
+
+        function seedStartingDistractions() {
+            const starterCount = Math.min(getIssueCap(), Math.min(workers.length, 1 + Math.floor(Math.random() * 2)));
+            const shuffledWorkers = [...workers].sort(() => Math.random() - 0.5);
+
+            shuffledWorkers.slice(0, starterCount).forEach((worker) => {
+                worker.distract(true);
+            });
         }
 
         function updateHUD() {
@@ -874,13 +909,14 @@
         }
 
         function initGame() {
-            resize();
-            player = new BossPlayer();
-            particles = [];
             profits = 0;
             day = 1;
             productivity = 100;
             dayTimer = 0;
+            resize();
+            player = new BossPlayer();
+            particles = [];
+            seedStartingDistractions();
 
             resetTransientInput();
             ui.startScreen.classList.add("hidden");
