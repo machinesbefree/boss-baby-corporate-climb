@@ -408,12 +408,12 @@
                     }
 
                     if (this.distractionTimer <= 0) {
-                        if (Math.random() < 0.002 * day) {
+                        if (Math.random() < 0.0025 * day) {
                             const distractions = ["playing", "sleeping", "crying"];
                             this.state = distractions[Math.floor(Math.random() * distractions.length)];
                             particles.push(new Particle(this.x, this.y - 20, "Distracted!", "#ef4444"));
                         }
-                        this.distractionTimer = 1000 + Math.random() * 2000;
+                        this.distractionTimer = 950 + Math.random() * 1900;
                         this.currentWorkEmoji = this.workEmojis[Math.floor(Math.random() * this.workEmojis.length)];
                     }
                 } else {

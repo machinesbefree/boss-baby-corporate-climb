@@ -321,6 +321,7 @@
         let viewHeight = window.innerHeight;
         let officeBounds = {};
         let screenBounds = {};
+        let topPlayInset = 0;
 
         const input = {
             keys: {},
@@ -420,11 +421,13 @@
             canvas.style.height = `${viewHeight}px`;
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
+            topPlayInset = Math.min(132, Math.max(106, viewHeight * 0.14));
+
             officeBounds = {
                 x: 0,
-                y: 0,
+                y: topPlayInset,
                 width: viewWidth,
-                height: Math.min(Math.max(viewHeight * 0.24, 150), 220),
+                height: Math.min(Math.max(viewHeight * 0.2, 138), 190),
                 doorX: viewWidth / 2,
                 doorWidth: Math.min(Math.max(viewWidth * 0.28, 110), 170)
             };
@@ -433,7 +436,7 @@
                 width: Math.min(viewWidth - 34, 280),
                 height: 84,
                 x: viewWidth / 2 - Math.min(viewWidth - 34, 280) / 2,
-                y: officeBounds.height + 18
+                y: officeBounds.y + officeBounds.height + 16
             };
 
             createCubicles();
@@ -443,7 +446,7 @@
             constructor() {
                 this.radius = 28;
                 this.x = officeBounds.width / 2;
-                this.y = officeBounds.height / 2 + 8;
+                this.y = officeBounds.y + officeBounds.height / 2 + 8;
                 this.vx = 0;
                 this.vy = 0;
                 this.baseSpeed = 4.8;
@@ -506,7 +509,7 @@
 
                 let nextX = this.x + this.vx;
                 let nextY = this.y + this.vy;
-                const wallY = officeBounds.height;
+                const wallY = officeBounds.y + officeBounds.height;
 
                 if ((this.y <= wallY && nextY > wallY) || (this.y >= wallY && nextY < wallY)) {
                     if (
@@ -519,7 +522,7 @@
                 }
 
                 this.x = clamp(nextX, this.radius, viewWidth - this.radius);
-                this.y = clamp(nextY, this.radius, viewHeight - this.radius);
+                this.y = clamp(nextY, officeBounds.y + this.radius, viewHeight - this.radius);
 
                 if (Math.hypot(this.vx, this.vy) > 2) {
                     this.trail.push({ x: this.x, y: this.y });
@@ -612,13 +615,13 @@
                     }
 
                     if (this.distractionTimer <= 0) {
-                        if (Math.random() < 0.00155 * day) {
+                        if (Math.random() < 0.00195 * day) {
                             const distractions = ["playing", "sleeping", "crying"];
                             this.state = distractions[Math.floor(Math.random() * distractions.length)];
                             particles.push(new Particle(this.x, this.y - 22, "Distracted!", "#ef4444"));
                         }
 
-                        this.distractionTimer = 1100 + Math.random() * 2200;
+                        this.distractionTimer = 1000 + Math.random() * 2000;
                         this.currentWorkEmoji = this.workEmojis[Math.floor(Math.random() * this.workEmojis.length)];
                     }
                 } else {
@@ -745,31 +748,35 @@
             ctx.fillStyle = "#f1f5f9";
             ctx.fillRect(0, 0, viewWidth, viewHeight);
 
+            ctx.fillStyle = "#e2e8f0";
+            ctx.fillRect(0, 0, viewWidth, topPlayInset);
+
             ctx.fillStyle = "#dbeafe";
-            ctx.fillRect(0, 0, officeBounds.width, officeBounds.height);
+            ctx.fillRect(0, officeBounds.y, officeBounds.width, officeBounds.height);
 
             const doorwayLeft = officeBounds.doorX - officeBounds.doorWidth / 2;
             const doorwayRight = officeBounds.doorX + officeBounds.doorWidth / 2;
+            const wallY = officeBounds.y + officeBounds.height;
 
             ctx.strokeStyle = "#1f2937";
             ctx.lineWidth = 8;
             ctx.lineCap = "round";
 
             ctx.beginPath();
-            ctx.moveTo(0, officeBounds.height);
-            ctx.lineTo(doorwayLeft, officeBounds.height);
+            ctx.moveTo(0, wallY);
+            ctx.lineTo(doorwayLeft, wallY);
             ctx.stroke();
 
             ctx.beginPath();
-            ctx.moveTo(doorwayRight, officeBounds.height);
-            ctx.lineTo(viewWidth, officeBounds.height);
+            ctx.moveTo(doorwayRight, wallY);
+            ctx.lineTo(viewWidth, wallY);
             ctx.stroke();
 
             ctx.fillStyle = "#78350f";
-            roundedRect(viewWidth / 2 - 54, 34, 108, 56, 16);
+            roundedRect(viewWidth / 2 - 54, officeBounds.y + 34, 108, 56, 16);
             ctx.fill();
             ctx.fillStyle = "#111827";
-            ctx.fillRect(viewWidth / 2 - 22, 26, 44, 18);
+            ctx.fillRect(viewWidth / 2 - 22, officeBounds.y + 24, 44, 18);
 
             ctx.fillStyle = "#1f2937";
             roundedRect(screenBounds.x, screenBounds.y, screenBounds.width, screenBounds.height, 14);
@@ -928,7 +935,7 @@
             resize();
             if (player) {
                 player.x = clamp(player.x, player.radius, viewWidth - player.radius);
-                player.y = clamp(player.y, player.radius, viewHeight - player.radius);
+                player.y = clamp(player.y, officeBounds.y + player.radius, viewHeight - player.radius);
                 updateHUD();
                 drawScene();
                 if (gameState === "PAUSED") drawPauseOverlay();
