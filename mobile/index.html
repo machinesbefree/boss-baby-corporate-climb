@@ -320,6 +320,8 @@
         let lastTime = 0;
         let animationId;
         const ISSUE_TIME_SCALE = 1.4;
+        const PRODUCTIVITY_DRAIN_SCALE = 0.5;
+        const PRODUCTIVITY_FIX_BONUS = 7;
 
         let viewWidth = window.innerWidth;
         let viewHeight = window.innerHeight;
@@ -648,9 +650,9 @@
                     }
                 } else {
                     let drainRate = 0;
-                    if (this.state === "playing") drainRate = 0.0018;
-                    if (this.state === "sleeping") drainRate = 0.0027;
-                    if (this.state === "crying") drainRate = 0.0044;
+                    if (this.state === "playing") drainRate = 0.0018 * PRODUCTIVITY_DRAIN_SCALE;
+                    if (this.state === "sleeping") drainRate = 0.0027 * PRODUCTIVITY_DRAIN_SCALE;
+                    if (this.state === "crying") drainRate = 0.0044 * PRODUCTIVITY_DRAIN_SCALE;
                     productivity -= deltaTime * drainRate;
                 }
             }
@@ -692,7 +694,7 @@
                     this.state = "working";
                     this.distractionTimer = Math.max(5000 * ISSUE_TIME_SCALE, this.getNextDistractionDelay() * 0.5);
                     particles.push(new Particle(this.x, this.y - 22, "Back to Work!", "#10b981"));
-                    productivity = Math.min(100, productivity + 6);
+                    productivity = Math.min(100, productivity + PRODUCTIVITY_FIX_BONUS);
                 }
             }
         }

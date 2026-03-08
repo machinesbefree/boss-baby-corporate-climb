@@ -170,6 +170,8 @@
         let lastTime = 0;
         let animationId;
         const ISSUE_TIME_SCALE = 1.4;
+        const PRODUCTIVITY_DRAIN_SCALE = 0.5;
+        const PRODUCTIVITY_FIX_BONUS = 6;
 
         let officeBounds = {};
         let screenBounds = {};
@@ -441,9 +443,9 @@
                     }
                 } else {
                     let drainRate = 0;
-                    if (this.state === "playing") drainRate = 0.002;
-                    if (this.state === "sleeping") drainRate = 0.003;
-                    if (this.state === "crying") drainRate = 0.005;
+                    if (this.state === "playing") drainRate = 0.002 * PRODUCTIVITY_DRAIN_SCALE;
+                    if (this.state === "sleeping") drainRate = 0.003 * PRODUCTIVITY_DRAIN_SCALE;
+                    if (this.state === "crying") drainRate = 0.005 * PRODUCTIVITY_DRAIN_SCALE;
 
                     productivity -= deltaTime * drainRate;
                 }
@@ -488,7 +490,7 @@
                     this.state = "working";
                     this.distractionTimer = Math.max(5000 * ISSUE_TIME_SCALE, this.getNextDistractionDelay() * 0.5);
                     particles.push(new Particle(this.x, this.y - 20, "Back to Work!", "#10b981"));
-                    productivity = Math.min(100, productivity + 5);
+                    productivity = Math.min(100, productivity + PRODUCTIVITY_FIX_BONUS);
                 }
             }
         }
