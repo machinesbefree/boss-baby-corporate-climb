@@ -102,6 +102,7 @@
             <div class="mb-4 text-6xl">😎💼</div>
             <h1 class="mb-2 text-5xl font-black tracking-tight text-gray-800">BOSS BABY</h1>
             <h2 class="mb-6 text-2xl font-bold uppercase tracking-widest text-blue-600">Corporate Climb</h2>
+            <p class="mb-5 text-sm font-black uppercase tracking-[0.22em] text-gray-500">Made by Carter with Gemini AI</p>
 
             <div class="mb-6 space-y-4 rounded-lg border-2 border-gray-200 bg-gray-50 p-6 text-left">
                 <p><strong>The Setup:</strong> You have your own corner office, and a bullpen full of baby workers.</p>
@@ -133,6 +134,8 @@
                     Total Profits: $<span id="finalScore" class="text-green-600">0</span>
                 </div>
             </div>
+
+            <p class="mb-6 text-xs font-black uppercase tracking-[0.22em] text-gray-500">Made by Carter with Gemini AI</p>
 
             <button id="restartBtn" class="w-full rounded-lg bg-red-500 px-8 py-4 text-2xl font-bold text-white shadow-lg transition hover:scale-105 hover:bg-red-600 active:scale-95">
                 Start New Company
@@ -166,6 +169,7 @@
         let productivity = 100;
         let lastTime = 0;
         let animationId;
+        const ISSUE_TIME_SCALE = 1.4;
 
         let officeBounds = {};
         let screenBounds = {};
@@ -398,14 +402,14 @@
             }
 
             getNextDistractionDelay(initial = false) {
-                const baseDelay = Math.max(13000, 20000 - (day - 1) * 900);
-                const variance = 7000;
-                const delay = Math.max(5000, baseDelay + (Math.random() * variance * 2 - variance));
+                const baseDelay = Math.max(13000, 20000 - (day - 1) * 900) * ISSUE_TIME_SCALE;
+                const variance = 7000 * ISSUE_TIME_SCALE;
+                const delay = Math.max(5000 * ISSUE_TIME_SCALE, baseDelay + (Math.random() * variance * 2 - variance));
                 return initial ? Math.random() * delay : delay;
             }
 
             getRetryDelay() {
-                return 2500 + Math.random() * 2500;
+                return (2500 + Math.random() * 2500) * ISSUE_TIME_SCALE;
             }
 
             distract(silent = false) {
@@ -482,7 +486,7 @@
             fix() {
                 if (this.state !== "working") {
                     this.state = "working";
-                    this.distractionTimer = Math.max(5000, this.getNextDistractionDelay() * 0.5);
+                    this.distractionTimer = Math.max(5000 * ISSUE_TIME_SCALE, this.getNextDistractionDelay() * 0.5);
                     particles.push(new Particle(this.x, this.y - 20, "Back to Work!", "#10b981"));
                     productivity = Math.min(100, productivity + 5);
                 }
