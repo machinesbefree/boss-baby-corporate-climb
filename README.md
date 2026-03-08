@@ -6,6 +6,8 @@ Small static browser game built as a GitHub Pages site.
 
 Live site: https://machinesbefree.github.io/boss-baby-corporate-climb/
 
+Mobile edition: https://machinesbefree.github.io/boss-baby-corporate-climb/mobile/
+
 Repo: https://github.com/machinesbefree/boss-baby-corporate-climb
 
 ## Controls

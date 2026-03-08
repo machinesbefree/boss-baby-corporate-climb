@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Boss Baby: Corporate Climb Mobile</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #e5e7eb;
+            touch-action: none;
+            user-select: none;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: calc(20px + var(--safe-top)) 16px calc(20px + var(--safe-bottom));
+            background: rgba(255, 255, 255, 0.92);
+            z-index: 20;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            pointer-events: none;
+            padding: calc(10px + var(--safe-top)) 10px 0;
+        }
+
+        .meter-container {
+            position: relative;
+            height: 24px;
+            width: 100%;
+            overflow: hidden;
+            border: 3px solid #1f2937;
+            border-radius: 999px;
+            background: rgba(229, 231, 235, 0.95);
+        }
+
+        .meter-fill {
+            height: 100%;
+            width: 100%;
+            background: #10b981;
+            transition: width 0.2s, background-color 0.2s;
+        }
+
+        .meter-text {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 900;
+            color: #111827;
+            text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.7);
+        }
+
+        .controls {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 12;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            padding: 0 14px calc(14px + var(--safe-bottom));
+            pointer-events: none;
+        }
+
+        .controls > * {
+            pointer-events: auto;
+        }
+
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .control-label {
+            min-width: 92px;
+            padding: 6px 10px;
+            border: 2px solid #1f2937;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.92);
+            text-align: center;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #1f2937;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+        }
+
+        .joystick {
+            position: relative;
+            width: 132px;
+            height: 132px;
+            border-radius: 999px;
+            border: 3px solid rgba(31, 41, 55, 0.9);
+            background:
+                radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.85) 0 24%, transparent 25% 100%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(209, 213, 219, 0.9));
+            box-shadow: 0 18px 32px rgba(15, 23, 42, 0.18);
+            touch-action: none;
+        }
+
+        .joystick::before,
+        .joystick::after {
+            content: "";
+            position: absolute;
+            background: rgba(31, 41, 55, 0.12);
+            border-radius: 999px;
+        }
+
+        .joystick::before {
+            top: 50%;
+            left: 16px;
+            right: 16px;
+            height: 3px;
+            transform: translateY(-50%);
+        }
+
+        .joystick::after {
+            left: 50%;
+            top: 16px;
+            bottom: 16px;
+            width: 3px;
+            transform: translateX(-50%);
+        }
+
+        .joystick-knob {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 54px;
+            height: 54px;
+            border-radius: 999px;
+            border: 3px solid #1f2937;
+            background: linear-gradient(180deg, #fef3c7, #f59e0b);
+            box-shadow: 0 10px 18px rgba(120, 53, 15, 0.25);
+            transform: translate(-50%, -50%);
+        }
+
+        .boost-btn {
+            width: 112px;
+            height: 112px;
+            border: 3px solid #7c2d12;
+            border-radius: 999px;
+            background: linear-gradient(180deg, #fb7185, #ef4444);
+            color: white;
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: 0.04em;
+            box-shadow: 0 18px 32px rgba(127, 29, 29, 0.28);
+            touch-action: none;
+            transition: transform 0.08s ease, filter 0.08s ease;
+        }
+
+        .boost-btn:active,
+        .boost-btn.pressed {
+            transform: scale(0.95);
+            filter: brightness(0.94);
+        }
+
+        @media (min-width: 821px) {
+            .controls {
+                justify-content: center;
+                gap: 36px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="hud" class="hud hidden">
+        <div class="mx-auto flex max-w-md flex-col gap-2">
+            <div class="rounded-2xl border-2 border-gray-800 bg-white/90 px-4 py-3 shadow-lg">
+                <div class="mb-2 flex items-center justify-between gap-3">
+                    <div class="text-[11px] font-black uppercase tracking-[0.28em] text-blue-600">Mobile Edition</div>
+                    <button id="pauseBtn" class="pointer-events-auto rounded-full border-2 border-gray-800 bg-white px-4 py-2 text-sm font-black text-gray-800 shadow-sm active:scale-95">
+                        ⏸ Pause
+                    </button>
+                </div>
+                <div class="flex items-center justify-between gap-3 text-xl font-black text-gray-800">
+                    <span>Day <span id="dayDisplay">1</span></span>
+                    <span>$<span id="scoreDisplay">0</span></span>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border-2 border-gray-800 bg-white/90 px-4 py-3 shadow-lg">
+                <div class="mb-2 text-xs font-black uppercase tracking-[0.24em] text-gray-700">Company Productivity</div>
+                <div class="meter-container">
+                    <div id="prodMeter" class="meter-fill"></div>
+                    <div id="prodText" class="meter-text">100%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="startScreen" class="overlay">
+        <div class="w-full max-w-md rounded-[28px] border-4 border-gray-900 bg-white p-6 text-center shadow-2xl">
+            <div class="mb-4 text-6xl">😎📱</div>
+            <h1 class="mb-2 text-4xl font-black tracking-tight text-gray-900">BOSS BABY</h1>
+            <h2 class="mb-5 text-lg font-black uppercase tracking-[0.35em] text-blue-600">Mobile Climb</h2>
+
+            <div class="mb-6 space-y-4 rounded-2xl border-2 border-gray-200 bg-slate-50 p-5 text-left text-gray-800">
+                <p><strong>The office moved upstairs.</strong> Charge out of the corner office and patrol the bullpen below.</p>
+                <p><strong>Left thumb:</strong> move with the joystick. <strong>Right thumb:</strong> hold <span class="font-black text-red-500">BOOST</span> to power walk.</p>
+                <p><strong>Goal:</strong> bump distracted baby workers back to work before productivity hits 0%.</p>
+                <p class="border-t pt-3 text-sm font-bold text-gray-500">Portrait mode works best, but the mobile page also scales in landscape.</p>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <button id="startBtn" class="w-full rounded-2xl bg-blue-600 px-6 py-4 text-2xl font-black text-white shadow-lg active:scale-95">
+                    START MOBILE SHIFT
+                </button>
+                <a href="../" class="block w-full rounded-2xl border-2 border-blue-600 bg-white px-6 py-3 text-center text-lg font-black text-blue-600 shadow-sm active:scale-95">
+                    PLAY DESKTOP VERSION
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div id="gameOverScreen" class="overlay hidden">
+        <div class="w-full max-w-sm rounded-[28px] border-4 border-red-500 bg-white p-6 text-center shadow-2xl">
+            <div class="mb-4 text-6xl">📉</div>
+            <h1 class="mb-2 text-4xl font-black text-red-600">BANKRUPT!</h1>
+            <p class="mb-6 text-lg text-gray-700">Productivity tanked. The company could not survive the baby chaos.</p>
+
+            <div class="mb-6 rounded-2xl bg-gray-100 p-4 text-2xl font-black text-gray-800">
+                Total Profits: $<span id="finalScore" class="text-green-600">0</span>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <button id="restartBtn" class="w-full rounded-2xl bg-red-500 px-6 py-4 text-xl font-black text-white shadow-lg active:scale-95">
+                    Start New Company
+                </button>
+                <a href="../" class="block w-full rounded-2xl border-2 border-gray-800 bg-white px-6 py-3 text-center text-base font-black text-gray-800 shadow-sm active:scale-95">
+                    Open Desktop Version
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div id="mobileControls" class="controls hidden">
+        <div class="control-panel">
+            <div class="control-label">Move</div>
+            <div id="joystick" class="joystick" aria-label="Movement joystick">
+                <div id="joystickKnob" class="joystick-knob"></div>
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <div class="control-label">Sprint</div>
+            <button id="boostBtn" class="boost-btn" aria-label="Boost button">BOOST</button>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas" aria-label="Boss Baby Corporate Climb mobile game"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const ui = {
+            startScreen: document.getElementById("startScreen"),
+            gameOverScreen: document.getElementById("gameOverScreen"),
+            hud: document.getElementById("hud"),
+            dayDisplay: document.getElementById("dayDisplay"),
+            scoreDisplay: document.getElementById("scoreDisplay"),
+            prodMeter: document.getElementById("prodMeter"),
+            prodText: document.getElementById("prodText"),
+            finalScore: document.getElementById("finalScore"),
+            startBtn: document.getElementById("startBtn"),
+            restartBtn: document.getElementById("restartBtn"),
+            pauseBtn: document.getElementById("pauseBtn"),
+            mobileControls: document.getElementById("mobileControls"),
+            joystick: document.getElementById("joystick"),
+            joystickKnob: document.getElementById("joystickKnob"),
+            boostBtn: document.getElementById("boostBtn")
+        };
+
+        let gameState = "START";
+        let profits = 0;
+        let day = 1;
+        let productivity = 100;
+        let lastTime = 0;
+        let animationId;
+
+        let viewWidth = window.innerWidth;
+        let viewHeight = window.innerHeight;
+        let officeBounds = {};
+        let screenBounds = {};
+
+        const input = {
+            keys: {},
+            pointer: {
+                id: null,
+                x: 0,
+                y: 0,
+                active: false
+            }
+        };
+
+        const controlState = {
+            joystickPointerId: null,
+            boostPointerId: null,
+            moveX: 0,
+            moveY: 0,
+            magnitude: 0,
+            boost: false
+        };
+
+        function setControlsVisible(visible) {
+            ui.mobileControls.classList.toggle("hidden", !visible);
+        }
+
+        function setBoost(active) {
+            controlState.boost = active;
+            ui.boostBtn.classList.toggle("pressed", active);
+        }
+
+        function resetJoystick() {
+            controlState.joystickPointerId = null;
+            controlState.moveX = 0;
+            controlState.moveY = 0;
+            controlState.magnitude = 0;
+            ui.joystickKnob.style.transform = "translate(-50%, -50%)";
+        }
+
+        function resetPointerTarget() {
+            input.pointer.id = null;
+            input.pointer.active = false;
+        }
+
+        function resetTransientInput() {
+            resetJoystick();
+            resetPointerTarget();
+            setBoost(false);
+        }
+
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(max, value));
+        }
+
+        function updateJoystick(clientX, clientY) {
+            const rect = ui.joystick.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const maxRadius = rect.width * 0.31;
+
+            let dx = clientX - centerX;
+            let dy = clientY - centerY;
+            const dist = Math.hypot(dx, dy);
+
+            if (dist > maxRadius) {
+                dx = (dx / dist) * maxRadius;
+                dy = (dy / dist) * maxRadius;
+            }
+
+            controlState.moveX = dx / maxRadius;
+            controlState.moveY = dy / maxRadius;
+            controlState.magnitude = clamp(dist / maxRadius, 0, 1);
+            ui.joystickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+        }
+
+        function roundedRect(x, y, width, height, radius) {
+            const safeRadius = Math.min(radius, width / 2, height / 2);
+            ctx.beginPath();
+            ctx.moveTo(x + safeRadius, y);
+            ctx.lineTo(x + width - safeRadius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
+            ctx.lineTo(x + width, y + height - safeRadius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height);
+            ctx.lineTo(x + safeRadius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
+            ctx.lineTo(x, y + safeRadius);
+            ctx.quadraticCurveTo(x, y, x + safeRadius, y);
+            ctx.closePath();
+        }
+
+        function resize() {
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            viewWidth = window.innerWidth;
+            viewHeight = window.innerHeight;
+
+            canvas.width = Math.floor(viewWidth * dpr);
+            canvas.height = Math.floor(viewHeight * dpr);
+            canvas.style.width = `${viewWidth}px`;
+            canvas.style.height = `${viewHeight}px`;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            officeBounds = {
+                x: 0,
+                y: 0,
+                width: viewWidth,
+                height: Math.min(Math.max(viewHeight * 0.24, 150), 220),
+                doorX: viewWidth / 2,
+                doorWidth: Math.min(Math.max(viewWidth * 0.28, 110), 170)
+            };
+
+            screenBounds = {
+                width: Math.min(viewWidth - 34, 280),
+                height: 84,
+                x: viewWidth / 2 - Math.min(viewWidth - 34, 280) / 2,
+                y: officeBounds.height + 18
+            };
+
+            createCubicles();
+        }
+
+        class BossPlayer {
+            constructor() {
+                this.radius = 28;
+                this.x = officeBounds.width / 2;
+                this.y = officeBounds.height / 2 + 8;
+                this.vx = 0;
+                this.vy = 0;
+                this.baseSpeed = 4.8;
+                this.friction = 0.82;
+                this.emoji = "😎";
+                this.trail = [];
+                this.speech = { text: "", timer: 0 };
+                this.quotes = [
+                    "Ship it! 🚀",
+                    "Move the needle! 📈",
+                    "Back on task! 💼",
+                    "Circle back! 🔁",
+                    "Let's hustle! ⚡",
+                    "Crush the quarter! 📊"
+                ];
+            }
+
+            speak() {
+                this.speech.text = this.quotes[Math.floor(Math.random() * this.quotes.length)];
+                this.speech.timer = 1800;
+            }
+
+            update(deltaTime) {
+                let moveX = 0;
+                let moveY = 0;
+                let currentSpeed = this.baseSpeed;
+
+                if (controlState.magnitude > 0.08) {
+                    moveX = controlState.moveX;
+                    moveY = controlState.moveY;
+                    currentSpeed *= 0.85 + controlState.magnitude * 0.85;
+                } else if (input.pointer.active) {
+                    const dx = input.pointer.x - this.x;
+                    const dy = input.pointer.y - this.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist > this.radius) {
+                        moveX = dx / dist;
+                        moveY = dy / dist;
+                        currentSpeed *= dist > 90 ? 1.45 : 1.05;
+                    }
+                } else {
+                    if (input.keys.w || input.keys.arrowup) moveY -= 1;
+                    if (input.keys.s || input.keys.arrowdown) moveY += 1;
+                    if (input.keys.a || input.keys.arrowleft) moveX -= 1;
+                    if (input.keys.d || input.keys.arrowright) moveX += 1;
+                }
+
+                if (controlState.boost || input.keys.shift || input.keys[" "]) {
+                    currentSpeed *= 1.7;
+                }
+
+                if (moveX !== 0 || moveY !== 0) {
+                    const magnitude = Math.hypot(moveX, moveY);
+                    this.vx += (moveX / magnitude) * currentSpeed * 0.22;
+                    this.vy += (moveY / magnitude) * currentSpeed * 0.22;
+                }
+
+                this.vx *= this.friction;
+                this.vy *= this.friction;
+
+                let nextX = this.x + this.vx;
+                let nextY = this.y + this.vy;
+                const wallY = officeBounds.height;
+
+                if ((this.y <= wallY && nextY > wallY) || (this.y >= wallY && nextY < wallY)) {
+                    if (
+                        nextX < officeBounds.doorX - officeBounds.doorWidth / 2 ||
+                        nextX > officeBounds.doorX + officeBounds.doorWidth / 2
+                    ) {
+                        this.vy = 0;
+                        nextY = this.y;
+                    }
+                }
+
+                this.x = clamp(nextX, this.radius, viewWidth - this.radius);
+                this.y = clamp(nextY, this.radius, viewHeight - this.radius);
+
+                if (Math.hypot(this.vx, this.vy) > 2) {
+                    this.trail.push({ x: this.x, y: this.y });
+                    if (this.trail.length > 10) this.trail.shift();
+                } else if (this.trail.length > 0) {
+                    this.trail.shift();
+                }
+
+                if (this.speech.timer > 0) this.speech.timer -= deltaTime;
+            }
+
+            draw() {
+                ctx.save();
+                this.trail.forEach((position, index) => {
+                    const alpha = (index / this.trail.length) * 0.32;
+                    ctx.globalAlpha = alpha;
+                    ctx.font = `${this.radius * 2}px sans-serif`;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(this.emoji, position.x, position.y);
+                });
+                ctx.restore();
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                if (Math.hypot(this.vx, this.vy) > 0.4) {
+                    ctx.rotate(Math.sin(performance.now() * 0.012) * 0.18);
+                }
+
+                ctx.font = `${this.radius * 2}px sans-serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.shadowColor = "rgba(0,0,0,0.25)";
+                ctx.shadowBlur = 12;
+                ctx.shadowOffsetY = 6;
+                ctx.fillText(this.emoji, 0, 0);
+
+                ctx.font = `${this.radius}px sans-serif`;
+                ctx.fillText("💼", 16, 12);
+                ctx.fillText("👔", -15, 12);
+
+                if (this.speech.timer > 0) {
+                    ctx.shadowColor = "transparent";
+                    ctx.rotate(-Math.sin(performance.now() * 0.012) * 0.18);
+
+                    ctx.fillStyle = "white";
+                    ctx.strokeStyle = "#1f2937";
+                    ctx.lineWidth = 2;
+                    roundedRect(-86, -84, 172, 38, 12);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.moveTo(-10, -46);
+                    ctx.lineTo(10, -46);
+                    ctx.lineTo(0, -30);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = "#1f2937";
+                    ctx.font = "bold 13px sans-serif";
+                    ctx.fillText(this.speech.text, 0, -63);
+                }
+
+                ctx.restore();
+            }
+        }
+
+        class Worker {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 22;
+                this.state = "working";
+                this.distractionTimer = 0;
+                this.workEmojis = ["💻", "📝", "📊"];
+                this.currentWorkEmoji = this.workEmojis[0];
+            }
+
+            update(deltaTime) {
+                this.distractionTimer -= deltaTime;
+
+                if (this.state === "working") {
+                    profits += deltaTime * 0.0064;
+
+                    if (Math.random() < 0.018) {
+                        particles.push(new Particle(this.x + (Math.random() - 0.5) * 20, this.y - 12, "$", "#10b981"));
+                    }
+
+                    if (this.distractionTimer <= 0) {
+                        if (Math.random() < 0.00155 * day) {
+                            const distractions = ["playing", "sleeping", "crying"];
+                            this.state = distractions[Math.floor(Math.random() * distractions.length)];
+                            particles.push(new Particle(this.x, this.y - 22, "Distracted!", "#ef4444"));
+                        }
+
+                        this.distractionTimer = 1100 + Math.random() * 2200;
+                        this.currentWorkEmoji = this.workEmojis[Math.floor(Math.random() * this.workEmojis.length)];
+                    }
+                } else {
+                    let drainRate = 0;
+                    if (this.state === "playing") drainRate = 0.0018;
+                    if (this.state === "sleeping") drainRate = 0.0027;
+                    if (this.state === "crying") drainRate = 0.0044;
+                    productivity -= deltaTime * drainRate;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                ctx.font = `${this.radius * 2}px sans-serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+
+                let babyEmoji = "👶";
+                let accessory = "";
+
+                if (this.state === "working") {
+                    accessory = this.currentWorkEmoji;
+                    ctx.translate(0, Math.sin(performance.now() * 0.005 + this.x) * 2);
+                } else if (this.state === "playing") {
+                    accessory = "🧸";
+                    ctx.rotate(Math.sin(performance.now() * 0.01 + this.y) * 0.22);
+                } else if (this.state === "sleeping") {
+                    babyEmoji = "😴";
+                    accessory = "💤";
+                } else if (this.state === "crying") {
+                    babyEmoji = "😭";
+                    ctx.rotate(Math.sin(performance.now() * 0.05) * 0.35);
+                    ctx.translate((Math.random() - 0.5) * 4, (Math.random() - 0.5) * 4);
+                }
+
+                ctx.fillText(babyEmoji, 0, 0);
+                ctx.font = `${this.radius}px sans-serif`;
+                ctx.fillText(accessory, 16, 12);
+                ctx.restore();
+            }
+
+            fix() {
+                if (this.state !== "working") {
+                    this.state = "working";
+                    this.distractionTimer = 3200;
+                    particles.push(new Particle(this.x, this.y - 22, "Back to Work!", "#10b981"));
+                    productivity = Math.min(100, productivity + 6);
+                }
+            }
+        }
+
+        class Particle {
+            constructor(x, y, text, color) {
+                this.x = x;
+                this.y = y;
+                this.text = text;
+                this.color = color;
+                this.life = 1;
+                this.vy = -1.5;
+            }
+
+            update() {
+                this.y += this.vy;
+                this.life -= 0.02;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.fillStyle = this.color;
+                ctx.font = "bold 16px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        let player;
+        let workers = [];
+        let particles = [];
+        let dayTimer = 0;
+
+        function createCubicles() {
+            workers = [];
+
+            const sidePadding = 30;
+            const bullpenTop = screenBounds.y + screenBounds.height + 30;
+            const usableWidth = Math.max(180, viewWidth - sidePadding * 2);
+            const usableHeight = Math.max(230, viewHeight - bullpenTop - 170);
+            const cols = Math.max(2, Math.min(4, Math.floor(usableWidth / 112)));
+            const rows = Math.max(2, Math.min(5, Math.floor(usableHeight / 112)));
+            const gapX = usableWidth / cols;
+            const gapY = usableHeight / rows;
+
+            for (let row = 0; row < rows; row += 1) {
+                for (let col = 0; col < cols; col += 1) {
+                    const x = sidePadding + gapX * (col + 0.5);
+                    const y = bullpenTop + gapY * (row + 0.5);
+                    workers.push(new Worker(x, y));
+                }
+            }
+        }
+
+        function updateHUD() {
+            ui.scoreDisplay.innerText = Math.floor(profits).toLocaleString();
+            ui.dayDisplay.innerText = day;
+
+            productivity = clamp(productivity, 0, 100);
+            ui.prodMeter.style.width = `${productivity}%`;
+            ui.prodText.innerText = `${Math.floor(productivity)}%`;
+
+            if (productivity > 70) {
+                ui.prodMeter.style.backgroundColor = "#10b981";
+            } else if (productivity > 35) {
+                ui.prodMeter.style.backgroundColor = "#f59e0b";
+            } else {
+                ui.prodMeter.style.backgroundColor = "#ef4444";
+            }
+        }
+
+        function drawEnvironment() {
+            ctx.fillStyle = "#f1f5f9";
+            ctx.fillRect(0, 0, viewWidth, viewHeight);
+
+            ctx.fillStyle = "#dbeafe";
+            ctx.fillRect(0, 0, officeBounds.width, officeBounds.height);
+
+            const doorwayLeft = officeBounds.doorX - officeBounds.doorWidth / 2;
+            const doorwayRight = officeBounds.doorX + officeBounds.doorWidth / 2;
+
+            ctx.strokeStyle = "#1f2937";
+            ctx.lineWidth = 8;
+            ctx.lineCap = "round";
+
+            ctx.beginPath();
+            ctx.moveTo(0, officeBounds.height);
+            ctx.lineTo(doorwayLeft, officeBounds.height);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(doorwayRight, officeBounds.height);
+            ctx.lineTo(viewWidth, officeBounds.height);
+            ctx.stroke();
+
+            ctx.fillStyle = "#78350f";
+            roundedRect(viewWidth / 2 - 54, 34, 108, 56, 16);
+            ctx.fill();
+            ctx.fillStyle = "#111827";
+            ctx.fillRect(viewWidth / 2 - 22, 26, 44, 18);
+
+            ctx.fillStyle = "#1f2937";
+            roundedRect(screenBounds.x, screenBounds.y, screenBounds.width, screenBounds.height, 14);
+            ctx.fill();
+
+            ctx.strokeStyle = "#475569";
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            ctx.fillStyle = "#10b981";
+            ctx.font = "bold 19px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText("BULLPEN METRICS", screenBounds.x + screenBounds.width / 2, screenBounds.y + 28);
+
+            ctx.strokeStyle = productivity > 50 ? "#10b981" : "#ef4444";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(screenBounds.x + 18, screenBounds.y + 66);
+            ctx.lineTo(screenBounds.x + screenBounds.width * 0.28, screenBounds.y + 58 + (100 - productivity) * 0.12);
+            ctx.lineTo(screenBounds.x + screenBounds.width * 0.5, screenBounds.y + 64);
+            ctx.lineTo(screenBounds.x + screenBounds.width * 0.72, screenBounds.y + 72 - productivity * 0.15);
+            ctx.lineTo(screenBounds.x + screenBounds.width - 18, screenBounds.y + 70 - productivity * 0.18);
+            ctx.stroke();
+
+            ctx.fillStyle = "#d1d5db";
+            ctx.strokeStyle = "#94a3b8";
+            ctx.lineWidth = 4;
+
+            workers.forEach((worker) => {
+                ctx.fillRect(worker.x - 28, worker.y - 8, 56, 28);
+                ctx.beginPath();
+                ctx.moveTo(worker.x - 32, worker.y - 18);
+                ctx.lineTo(worker.x - 32, worker.y + 24);
+                ctx.lineTo(worker.x + 32, worker.y + 24);
+                ctx.stroke();
+            });
+        }
+
+        function drawScene() {
+            drawEnvironment();
+            workers.forEach((worker) => worker.draw());
+            player.draw();
+            particles.forEach((particle) => particle.draw());
+        }
+
+        function drawPauseOverlay() {
+            ctx.fillStyle = "rgba(15, 23, 42, 0.42)";
+            ctx.fillRect(0, 0, viewWidth, viewHeight);
+            ctx.fillStyle = "white";
+            ctx.textAlign = "center";
+            ctx.font = "bold 44px sans-serif";
+            ctx.fillText("PAUSED", viewWidth / 2, viewHeight / 2);
+            ctx.font = "bold 18px sans-serif";
+            ctx.fillText("Tap Resume when the board meeting ends.", viewWidth / 2, viewHeight / 2 + 36);
+        }
+
+        function checkInteractions() {
+            workers.forEach((worker) => {
+                if (worker.state !== "working") {
+                    const distance = Math.hypot(player.x - worker.x, player.y - worker.y);
+                    if (distance < player.radius + worker.radius + 22) {
+                        worker.fix();
+                        player.speak();
+                    }
+                }
+            });
+        }
+
+        function finishGame() {
+            gameState = "GAMEOVER";
+            cancelAnimationFrame(animationId);
+            ui.hud.classList.add("hidden");
+            setControlsVisible(false);
+            ui.gameOverScreen.classList.remove("hidden");
+            ui.finalScore.innerText = Math.floor(profits).toLocaleString();
+            resetTransientInput();
+        }
+
+        function pauseGame() {
+            if (gameState !== "PLAYING") return;
+            gameState = "PAUSED";
+            cancelAnimationFrame(animationId);
+            resetTransientInput();
+            ui.pauseBtn.textContent = "▶ Resume";
+            drawScene();
+            drawPauseOverlay();
+        }
+
+        function resumeGame() {
+            if (gameState !== "PAUSED") return;
+            gameState = "PLAYING";
+            ui.pauseBtn.textContent = "⏸ Pause";
+            lastTime = performance.now();
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function initGame() {
+            resize();
+            player = new BossPlayer();
+            particles = [];
+            profits = 0;
+            day = 1;
+            productivity = 100;
+            dayTimer = 0;
+
+            resetTransientInput();
+            ui.startScreen.classList.add("hidden");
+            ui.gameOverScreen.classList.add("hidden");
+            ui.hud.classList.remove("hidden");
+            setControlsVisible(true);
+            ui.pauseBtn.textContent = "⏸ Pause";
+
+            gameState = "PLAYING";
+            updateHUD();
+            drawScene();
+            lastTime = performance.now();
+            cancelAnimationFrame(animationId);
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function gameLoop(timestamp) {
+            if (gameState !== "PLAYING") return;
+
+            const deltaTime = Math.min(timestamp - lastTime, 40);
+            lastTime = timestamp;
+
+            dayTimer += deltaTime;
+            if (dayTimer > 15000) {
+                day += 1;
+                dayTimer = 0;
+                productivity = Math.min(100, productivity + 18);
+                particles.push(new Particle(player.x, player.y - 42, "NEW DAY! Keep climbing!", "#3b82f6"));
+            }
+
+            player.update(deltaTime);
+            workers.forEach((worker) => worker.update(deltaTime));
+
+            for (let index = particles.length - 1; index >= 0; index -= 1) {
+                particles[index].update();
+                if (particles[index].life <= 0) particles.splice(index, 1);
+            }
+
+            checkInteractions();
+            updateHUD();
+
+            if (productivity <= 0) {
+                finishGame();
+                return;
+            }
+
+            drawScene();
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener("resize", () => {
+            resize();
+            if (player) {
+                player.x = clamp(player.x, player.radius, viewWidth - player.radius);
+                player.y = clamp(player.y, player.radius, viewHeight - player.radius);
+                updateHUD();
+                drawScene();
+                if (gameState === "PAUSED") drawPauseOverlay();
+            } else {
+                drawEnvironment();
+            }
+        });
+
+        window.addEventListener("keydown", (event) => {
+            input.keys[event.key.toLowerCase()] = true;
+        });
+
+        window.addEventListener("keyup", (event) => {
+            input.keys[event.key.toLowerCase()] = false;
+        });
+
+        canvas.addEventListener("pointerdown", (event) => {
+            if (gameState !== "PLAYING") return;
+            if (event.pointerType === "touch") {
+                event.preventDefault();
+            }
+            input.pointer.id = event.pointerId;
+            input.pointer.active = true;
+            input.pointer.x = event.clientX;
+            input.pointer.y = event.clientY;
+        });
+
+        canvas.addEventListener("pointermove", (event) => {
+            if (input.pointer.active && input.pointer.id === event.pointerId) {
+                input.pointer.x = event.clientX;
+                input.pointer.y = event.clientY;
+            }
+        });
+
+        canvas.addEventListener("pointerup", (event) => {
+            if (input.pointer.id === event.pointerId) {
+                resetPointerTarget();
+            }
+        });
+
+        canvas.addEventListener("pointercancel", (event) => {
+            if (input.pointer.id === event.pointerId) {
+                resetPointerTarget();
+            }
+        });
+
+        ui.joystick.addEventListener("pointerdown", (event) => {
+            if (gameState !== "PLAYING") return;
+            event.preventDefault();
+            controlState.joystickPointerId = event.pointerId;
+            if (ui.joystick.setPointerCapture) ui.joystick.setPointerCapture(event.pointerId);
+            updateJoystick(event.clientX, event.clientY);
+        });
+
+        ui.joystick.addEventListener("pointermove", (event) => {
+            if (controlState.joystickPointerId === event.pointerId) {
+                updateJoystick(event.clientX, event.clientY);
+            }
+        });
+
+        ui.joystick.addEventListener("pointerup", (event) => {
+            if (controlState.joystickPointerId === event.pointerId) {
+                resetJoystick();
+            }
+        });
+
+        ui.joystick.addEventListener("pointercancel", (event) => {
+            if (controlState.joystickPointerId === event.pointerId) {
+                resetJoystick();
+            }
+        });
+
+        ui.boostBtn.addEventListener("pointerdown", (event) => {
+            if (gameState !== "PLAYING") return;
+            event.preventDefault();
+            controlState.boostPointerId = event.pointerId;
+            if (ui.boostBtn.setPointerCapture) ui.boostBtn.setPointerCapture(event.pointerId);
+            setBoost(true);
+        });
+
+        ui.boostBtn.addEventListener("pointerup", (event) => {
+            if (controlState.boostPointerId === event.pointerId) {
+                controlState.boostPointerId = null;
+                setBoost(false);
+            }
+        });
+
+        ui.boostBtn.addEventListener("pointercancel", (event) => {
+            if (controlState.boostPointerId === event.pointerId) {
+                controlState.boostPointerId = null;
+                setBoost(false);
+            }
+        });
+
+        window.addEventListener("blur", resetTransientInput);
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                pauseGame();
+            }
+        });
+
+        ui.startBtn.addEventListener("click", initGame);
+        ui.restartBtn.addEventListener("click", initGame);
+        ui.pauseBtn.addEventListener("click", () => {
+            if (gameState === "PLAYING") {
+                pauseGame();
+            } else if (gameState === "PAUSED") {
+                resumeGame();
+            }
+        });
+
+        resize();
+        drawEnvironment();
+    </script>
+</body>
+</html>
