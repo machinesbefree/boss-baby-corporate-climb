@@ -4,7 +4,9 @@ Small static browser game built as a GitHub Pages site.
 
 ## Play
 
-Open the published site once GitHub Pages is enabled for this repository.
+Live site: https://machinesbefree.github.io/boss-baby-corporate-climb/
+
+Repo: https://github.com/machinesbefree/boss-baby-corporate-climb
 
 ## Controls
 
@@ -16,5 +18,5 @@ Open the published site once GitHub Pages is enabled for this repository.
 ## Local preview
 
 ```bash
-python3 -m http.server 8000
+python3 -m http.server 4173
 ```
