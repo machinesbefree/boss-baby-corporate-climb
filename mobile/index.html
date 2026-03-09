@@ -211,6 +211,7 @@
                         ⏸ Pause
                     </button>
                 </div>
+                <div class="mb-2 text-xs font-black uppercase tracking-[0.2em] text-gray-600">Rank <span id="titleDisplay">Level 1 • Intern</span></div>
                 <div class="flex items-center justify-between gap-3 text-xl font-black text-gray-800">
                     <span>Day <span id="dayDisplay">1</span></span>
                     <span>$<span id="scoreDisplay">0</span></span>
@@ -222,6 +223,14 @@
                 <div class="meter-container">
                     <div id="prodMeter" class="meter-fill"></div>
                     <div id="prodText" class="meter-text">100%</div>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border-2 border-gray-800 bg-white/90 px-4 py-3 shadow-lg">
+                <div class="mb-2 text-xs font-black uppercase tracking-[0.24em] text-gray-700">Promotion Progress</div>
+                <div class="meter-container">
+                    <div id="careerMeter" class="meter-fill" style="background-color: #3b82f6;"></div>
+                    <div id="careerText" class="meter-text">Next: Assistant Manager</div>
                 </div>
             </div>
         </div>
@@ -238,6 +247,7 @@
                 <p><strong>The office moved upstairs.</strong> Charge out of the corner office and patrol the bullpen below.</p>
                 <p><strong>Left thumb:</strong> move with the joystick. <strong>Right thumb:</strong> hold <span class="font-black text-red-500">BOOST</span> to power walk.</p>
                 <p><strong>Goal:</strong> bump distracted baby workers back to work before productivity hits 0%.</p>
+                <p><strong>Win:</strong> climb the company ladder and reach CEO in about 3 minutes.</p>
                 <p class="border-t pt-3 text-sm font-bold text-gray-500">Portrait mode works best, but the mobile page also scales in landscape.</p>
             </div>
 
@@ -262,6 +272,10 @@
                 Total Profits: $<span id="finalScore" class="text-green-600">0</span>
             </div>
 
+            <div class="mb-6 rounded-2xl bg-blue-50 p-3 text-lg font-black text-blue-700">
+                Reached: <span id="finalTitle">Level 1 • Intern</span>
+            </div>
+
             <p class="mb-6 text-xs font-black uppercase tracking-[0.22em] text-gray-500">Made by Carter with Gemini AI</p>
 
             <div class="flex flex-col gap-3">
@@ -272,6 +286,30 @@
                     Open Desktop Version
                 </a>
             </div>
+        </div>
+    </div>
+
+    <div id="victoryScreen" class="overlay hidden">
+        <div class="w-full max-w-sm rounded-[28px] border-4 border-blue-500 bg-white p-6 text-center shadow-2xl">
+            <div class="mb-4 text-6xl">🏆</div>
+            <h1 class="mb-2 text-4xl font-black text-blue-600">YOU'RE CEO!</h1>
+            <p class="mb-6 text-lg text-gray-700">You climbed the whole company ladder and made the babies proud.</p>
+
+            <div class="mb-6 rounded-2xl bg-blue-50 p-4 text-xl font-black text-blue-700">
+                Final Title: <span id="winTitle">Level 7 • CEO</span>
+            </div>
+            <div class="mb-4 rounded-2xl bg-gray-100 p-4 text-2xl font-black text-gray-800">
+                Total Profits: $<span id="winScore" class="text-green-600">0</span>
+            </div>
+            <div class="mb-6 rounded-2xl bg-amber-50 p-4 text-xl font-black text-amber-700">
+                Time to CEO: <span id="winTime">3:00</span>
+            </div>
+
+            <p class="mb-6 text-xs font-black uppercase tracking-[0.22em] text-gray-500">Made by Carter with Gemini AI</p>
+
+            <button id="winRestartBtn" class="w-full rounded-2xl bg-blue-600 px-6 py-4 text-xl font-black text-white shadow-lg active:scale-95">
+                Start New Company
+            </button>
         </div>
     </div>
 
@@ -298,19 +336,28 @@
         const ui = {
             startScreen: document.getElementById("startScreen"),
             gameOverScreen: document.getElementById("gameOverScreen"),
+            victoryScreen: document.getElementById("victoryScreen"),
             hud: document.getElementById("hud"),
             dayDisplay: document.getElementById("dayDisplay"),
             scoreDisplay: document.getElementById("scoreDisplay"),
+            titleDisplay: document.getElementById("titleDisplay"),
             prodMeter: document.getElementById("prodMeter"),
             prodText: document.getElementById("prodText"),
+            careerMeter: document.getElementById("careerMeter"),
+            careerText: document.getElementById("careerText"),
             finalScore: document.getElementById("finalScore"),
+            finalTitle: document.getElementById("finalTitle"),
+            winScore: document.getElementById("winScore"),
+            winTitle: document.getElementById("winTitle"),
+            winTime: document.getElementById("winTime"),
             startBtn: document.getElementById("startBtn"),
             restartBtn: document.getElementById("restartBtn"),
             pauseBtn: document.getElementById("pauseBtn"),
             mobileControls: document.getElementById("mobileControls"),
             joystick: document.getElementById("joystick"),
             joystickKnob: document.getElementById("joystickKnob"),
-            boostBtn: document.getElementById("boostBtn")
+            boostBtn: document.getElementById("boostBtn"),
+            winRestartBtn: document.getElementById("winRestartBtn")
         };
 
         let gameState = "START";
@@ -322,12 +369,17 @@
         const ISSUE_TIME_SCALE = 1.4;
         const PRODUCTIVITY_DRAIN_SCALE = 0.5;
         const PRODUCTIVITY_FIX_BONUS = 7;
+        const PROMOTION_TITLES = ["Intern", "Assistant Manager", "Team Lead", "Director", "Vice President", "President", "CEO"];
+        const CEO_TARGET_TIME = 180000;
+        const PROMOTION_INTERVAL = CEO_TARGET_TIME / (PROMOTION_TITLES.length - 1);
 
         let viewWidth = window.innerWidth;
         let viewHeight = window.innerHeight;
         let officeBounds = {};
         let screenBounds = {};
         let topPlayInset = 0;
+        let careerTime = 0;
+        let titleIndex = 0;
 
         const input = {
             keys: {},
@@ -768,13 +820,50 @@
             });
         }
 
+        function formatTime(milliseconds) {
+            const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${minutes}:${String(seconds).padStart(2, "0")}`;
+        }
+
+        function getPromotionLabel(index = titleIndex) {
+            return `Level ${index + 1} • ${PROMOTION_TITLES[index]}`;
+        }
+
+        function handlePromotion() {
+            titleIndex += 1;
+            productivity = Math.min(100, productivity + 10);
+            particles.push(new Particle(player.x, player.y - 50, `PROMOTED: ${PROMOTION_TITLES[titleIndex]}!`, "#2563eb"));
+            player.speak();
+        }
+
+        function updateCareerProgress() {
+            while (titleIndex < PROMOTION_TITLES.length - 1 && careerTime >= (titleIndex + 1) * PROMOTION_INTERVAL) {
+                handlePromotion();
+            }
+        }
+
         function updateHUD() {
             ui.scoreDisplay.innerText = Math.floor(profits).toLocaleString();
             ui.dayDisplay.innerText = day;
+            ui.titleDisplay.innerText = getPromotionLabel();
 
             productivity = clamp(productivity, 0, 100);
             ui.prodMeter.style.width = `${productivity}%`;
             ui.prodText.innerText = `${Math.floor(productivity)}%`;
+
+            const isAtTopTitle = titleIndex === PROMOTION_TITLES.length - 1;
+            if (isAtTopTitle) {
+                ui.careerMeter.style.width = "100%";
+                ui.careerText.innerText = "CEO reached!";
+            } else {
+                const levelStart = titleIndex * PROMOTION_INTERVAL;
+                const levelProgress = ((careerTime - levelStart) / PROMOTION_INTERVAL) * 100;
+                const nextTitle = PROMOTION_TITLES[titleIndex + 1];
+                ui.careerMeter.style.width = `${clamp(levelProgress, 0, 100)}%`;
+                ui.careerText.innerText = `Next: ${nextTitle} • ${formatTime((titleIndex + 1) * PROMOTION_INTERVAL - careerTime)}`;
+            }
 
             if (productivity > 70) {
                 ui.prodMeter.style.backgroundColor = "#10b981";
@@ -893,6 +982,19 @@
             setControlsVisible(false);
             ui.gameOverScreen.classList.remove("hidden");
             ui.finalScore.innerText = Math.floor(profits).toLocaleString();
+            ui.finalTitle.innerText = getPromotionLabel();
+            resetTransientInput();
+        }
+
+        function finishVictory() {
+            gameState = "VICTORY";
+            cancelAnimationFrame(animationId);
+            ui.hud.classList.add("hidden");
+            setControlsVisible(false);
+            ui.victoryScreen.classList.remove("hidden");
+            ui.winScore.innerText = Math.floor(profits).toLocaleString();
+            ui.winTitle.innerText = getPromotionLabel(PROMOTION_TITLES.length - 1);
+            ui.winTime.innerText = formatTime(careerTime);
             resetTransientInput();
         }
 
@@ -919,6 +1021,8 @@
             day = 1;
             productivity = 100;
             dayTimer = 0;
+            careerTime = 0;
+            titleIndex = 0;
             resize();
             player = new BossPlayer();
             particles = [];
@@ -927,6 +1031,7 @@
             resetTransientInput();
             ui.startScreen.classList.add("hidden");
             ui.gameOverScreen.classList.add("hidden");
+            ui.victoryScreen.classList.add("hidden");
             ui.hud.classList.remove("hidden");
             setControlsVisible(true);
             ui.pauseBtn.textContent = "⏸ Pause";
@@ -944,6 +1049,9 @@
 
             const deltaTime = Math.min(timestamp - lastTime, 40);
             lastTime = timestamp;
+
+            careerTime += deltaTime;
+            updateCareerProgress();
 
             dayTimer += deltaTime;
             if (dayTimer > 15000) {
@@ -966,6 +1074,11 @@
 
             if (productivity <= 0) {
                 finishGame();
+                return;
+            }
+
+            if (careerTime >= CEO_TARGET_TIME) {
+                finishVictory();
                 return;
             }
 
@@ -1081,6 +1194,7 @@
 
         ui.startBtn.addEventListener("click", initGame);
         ui.restartBtn.addEventListener("click", initGame);
+        ui.winRestartBtn.addEventListener("click", initGame);
         ui.pauseBtn.addEventListener("click", () => {
             if (gameState === "PLAYING") {
                 pauseGame();

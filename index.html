@@ -77,9 +77,10 @@
 <body>
     <div id="hud" class="hud hidden">
         <div class="flex flex-col gap-2">
-            <div class="flex gap-4 rounded-lg border-2 border-gray-800 bg-white/90 px-4 py-2 text-2xl font-bold text-gray-800 shadow-sm">
+            <div class="flex flex-wrap gap-4 rounded-lg border-2 border-gray-800 bg-white/90 px-4 py-2 text-2xl font-bold text-gray-800 shadow-sm">
                 <span>Day: <span id="dayDisplay">1</span></span>
                 <span>Profits: $<span id="scoreDisplay">0</span></span>
+                <span>Rank: <span id="titleDisplay">Level 1 • Intern</span></span>
             </div>
 
             <div class="flex flex-col gap-1">
@@ -87,6 +88,14 @@
                 <div class="meter-container">
                     <div id="prodMeter" class="meter-fill"></div>
                     <div id="prodText" class="meter-text">100%</div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-1">
+                <span class="text-sm font-bold text-gray-800 drop-shadow-md">Promotion Progress:</span>
+                <div class="meter-container">
+                    <div id="careerMeter" class="meter-fill" style="background-color: #3b82f6;"></div>
+                    <div id="careerText" class="meter-text">Next: Assistant Manager</div>
                 </div>
             </div>
         </div>
@@ -108,6 +117,7 @@
                 <p><strong>The Setup:</strong> You have your own corner office, and a bullpen full of baby workers.</p>
                 <p><strong>The Problem:</strong> Babies get distracted easily (🧸, 💤, 😭).</p>
                 <p><strong>Your Job:</strong> Run out of your office and bump into slacking babies to get them back to work (💻). Don't let company productivity hit 0%.</p>
+                <p><strong>The Goal:</strong> Survive the corporate ladder and reach CEO in about 3 minutes.</p>
                 <p class="mt-4 border-t pt-2 text-sm font-bold text-gray-500">Desktop controls: WASD, Arrows, or Touch & Drag</p>
                 <p class="text-sm font-bold text-blue-600">Phone-friendly mobile edition: <a href="./mobile/" class="underline decoration-2 underline-offset-2">open here</a></p>
             </div>
@@ -133,11 +143,40 @@
                 <div class="rounded-lg bg-gray-100 p-4 text-2xl font-bold text-gray-800">
                     Total Profits: $<span id="finalScore" class="text-green-600">0</span>
                 </div>
+                <div class="rounded-lg bg-blue-50 p-3 text-lg font-bold text-blue-700">
+                    Reached: <span id="finalTitle">Level 1 • Intern</span>
+                </div>
             </div>
 
             <p class="mb-6 text-xs font-black uppercase tracking-[0.22em] text-gray-500">Made by Carter with Gemini AI</p>
 
             <button id="restartBtn" class="w-full rounded-lg bg-red-500 px-8 py-4 text-2xl font-bold text-white shadow-lg transition hover:scale-105 hover:bg-red-600 active:scale-95">
+                Start New Company
+            </button>
+        </div>
+    </div>
+
+    <div id="victoryScreen" class="overlay hidden">
+        <div class="w-[90%] max-w-md rounded-xl border-4 border-blue-500 bg-white p-8 text-center shadow-2xl">
+            <h1 class="mb-4 text-6xl">🏆</h1>
+            <h1 class="mb-2 text-4xl font-black text-blue-600">YOU'RE CEO!</h1>
+            <p class="mb-6 text-xl text-gray-700">You kept the babies on task long enough to run the whole company.</p>
+
+            <div class="mb-8 flex flex-col gap-3">
+                <div class="rounded-lg bg-blue-50 p-4 text-2xl font-bold text-blue-700">
+                    Final Title: <span id="winTitle">Level 7 • CEO</span>
+                </div>
+                <div class="rounded-lg bg-gray-100 p-4 text-2xl font-bold text-gray-800">
+                    Total Profits: $<span id="winScore" class="text-green-600">0</span>
+                </div>
+                <div class="rounded-lg bg-amber-50 p-4 text-xl font-bold text-amber-700">
+                    Time to CEO: <span id="winTime">3:00</span>
+                </div>
+            </div>
+
+            <p class="mb-6 text-xs font-black uppercase tracking-[0.22em] text-gray-500">Made by Carter with Gemini AI</p>
+
+            <button id="winRestartBtn" class="w-full rounded-lg bg-blue-600 px-8 py-4 text-2xl font-bold text-white shadow-lg transition hover:scale-105 hover:bg-blue-700 active:scale-95">
                 Start New Company
             </button>
         </div>
@@ -152,15 +191,24 @@
         const ui = {
             startScreen: document.getElementById("startScreen"),
             gameOverScreen: document.getElementById("gameOverScreen"),
+            victoryScreen: document.getElementById("victoryScreen"),
             hud: document.getElementById("hud"),
             dayDisplay: document.getElementById("dayDisplay"),
             scoreDisplay: document.getElementById("scoreDisplay"),
+            titleDisplay: document.getElementById("titleDisplay"),
             prodMeter: document.getElementById("prodMeter"),
             prodText: document.getElementById("prodText"),
+            careerMeter: document.getElementById("careerMeter"),
+            careerText: document.getElementById("careerText"),
             finalScore: document.getElementById("finalScore"),
+            finalTitle: document.getElementById("finalTitle"),
+            winScore: document.getElementById("winScore"),
+            winTitle: document.getElementById("winTitle"),
+            winTime: document.getElementById("winTime"),
             startBtn: document.getElementById("startBtn"),
             restartBtn: document.getElementById("restartBtn"),
-            pauseBtn: document.getElementById("pauseBtn")
+            pauseBtn: document.getElementById("pauseBtn"),
+            winRestartBtn: document.getElementById("winRestartBtn")
         };
 
         let gameState = "START";
@@ -172,9 +220,14 @@
         const ISSUE_TIME_SCALE = 1.4;
         const PRODUCTIVITY_DRAIN_SCALE = 0.5;
         const PRODUCTIVITY_FIX_BONUS = 6;
+        const PROMOTION_TITLES = ["Intern", "Assistant Manager", "Team Lead", "Director", "Vice President", "President", "CEO"];
+        const CEO_TARGET_TIME = 180000;
+        const PROMOTION_INTERVAL = CEO_TARGET_TIME / (PROMOTION_TITLES.length - 1);
 
         let officeBounds = {};
         let screenBounds = {};
+        let careerTime = 0;
+        let titleIndex = 0;
 
         function resize() {
             canvas.width = window.innerWidth;
@@ -562,11 +615,47 @@
             });
         }
 
+        function formatTime(milliseconds) {
+            const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${minutes}:${String(seconds).padStart(2, "0")}`;
+        }
+
+        function getPromotionLabel(index = titleIndex) {
+            return `Level ${index + 1} • ${PROMOTION_TITLES[index]}`;
+        }
+
+        function handlePromotion() {
+            titleIndex += 1;
+            productivity = Math.min(100, productivity + 10);
+            particles.push(new Particle(player.x, player.y - 50, `PROMOTED: ${PROMOTION_TITLES[titleIndex]}!`, "#2563eb"));
+            player.speak();
+        }
+
+        function updateCareerProgress() {
+            while (titleIndex < PROMOTION_TITLES.length - 1 && careerTime >= (titleIndex + 1) * PROMOTION_INTERVAL) {
+                handlePromotion();
+            }
+        }
+
+        function finishVictory() {
+            gameState = "VICTORY";
+            ui.hud.classList.add("hidden");
+            ui.victoryScreen.classList.remove("hidden");
+            ui.winScore.innerText = Math.floor(profits).toLocaleString();
+            ui.winTitle.innerText = getPromotionLabel(PROMOTION_TITLES.length - 1);
+            ui.winTime.innerText = formatTime(careerTime);
+            input.pointer.active = false;
+        }
+
         function initGame() {
             profits = 0;
             day = 1;
             productivity = 100;
             dayTimer = 0;
+            careerTime = 0;
+            titleIndex = 0;
             resize();
             player = new BossPlayer();
             particles = [];
@@ -574,10 +663,12 @@
             
             ui.startScreen.classList.add("hidden");
             ui.gameOverScreen.classList.add("hidden");
+            ui.victoryScreen.classList.add("hidden");
             ui.hud.classList.remove("hidden");
             ui.pauseBtn.textContent = "⏸️ Pause";
 
             gameState = "PLAYING";
+            updateHUD();
             lastTime = performance.now();
             cancelAnimationFrame(animationId);
             gameLoop(lastTime);
@@ -586,10 +677,23 @@
         function updateHUD() {
             ui.scoreDisplay.innerText = Math.floor(profits).toLocaleString();
             ui.dayDisplay.innerText = day;
+            ui.titleDisplay.innerText = getPromotionLabel();
 
             productivity = Math.max(0, Math.min(100, productivity));
             ui.prodMeter.style.width = `${productivity}%`;
             ui.prodText.innerText = `${Math.floor(productivity)}%`;
+
+            const isAtTopTitle = titleIndex === PROMOTION_TITLES.length - 1;
+            if (isAtTopTitle) {
+                ui.careerMeter.style.width = "100%";
+                ui.careerText.innerText = "CEO reached!";
+            } else {
+                const levelStart = titleIndex * PROMOTION_INTERVAL;
+                const levelProgress = ((careerTime - levelStart) / PROMOTION_INTERVAL) * 100;
+                const nextTitle = PROMOTION_TITLES[titleIndex + 1];
+                ui.careerMeter.style.width = `${Math.max(0, Math.min(100, levelProgress))}%`;
+                ui.careerText.innerText = `Next: ${nextTitle} • ${formatTime((titleIndex + 1) * PROMOTION_INTERVAL - careerTime)}`;
+            }
 
             if (productivity > 70) {
                 ui.prodMeter.style.backgroundColor = "#10b981";
@@ -695,7 +799,16 @@
                 ui.hud.classList.add("hidden");
                 ui.gameOverScreen.classList.remove("hidden");
                 ui.finalScore.innerText = Math.floor(profits).toLocaleString();
+                ui.finalTitle.innerText = getPromotionLabel();
                 input.pointer.active = false;
+                return;
+            }
+
+            careerTime += deltaTime;
+            updateCareerProgress();
+
+            if (careerTime >= CEO_TARGET_TIME) {
+                finishVictory();
                 return;
             }
 
@@ -720,6 +833,7 @@
 
         ui.startBtn.addEventListener("click", initGame);
         ui.restartBtn.addEventListener("click", initGame);
+        ui.winRestartBtn.addEventListener("click", initGame);
         ui.pauseBtn.addEventListener("click", () => {
             if (gameState === "PLAYING") {
                 gameState = "PAUSED";
