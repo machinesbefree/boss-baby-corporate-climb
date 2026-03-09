@@ -156,6 +156,28 @@
         </div>
     </div>
 
+    <div id="promotionScreen" class="overlay hidden">
+        <div class="w-[90%] max-w-md rounded-xl border-4 border-blue-500 bg-white p-8 text-center shadow-2xl">
+            <h1 class="mb-4 text-6xl">🎉</h1>
+            <h1 class="mb-2 text-4xl font-black text-blue-600">PROMOTION!</h1>
+            <p id="promotionTitle" class="mb-4 text-2xl font-black text-gray-800">Level 2 • Assistant Manager</p>
+            <p id="promotionBlurb" class="mb-6 text-lg text-gray-700">New floor, same baby chaos.</p>
+
+            <div class="mb-8 flex flex-col gap-3">
+                <div class="rounded-lg bg-green-50 p-4 text-lg font-bold text-green-700">
+                    Productivity reset to 100%
+                </div>
+                <div id="promotionDetails" class="rounded-lg bg-blue-50 p-4 text-base font-bold text-blue-700">
+                    Up to 2 distracted babies at once.
+                </div>
+            </div>
+
+            <button id="promotionBtn" class="w-full rounded-lg bg-blue-600 px-8 py-4 text-2xl font-bold text-white shadow-lg transition hover:scale-105 hover:bg-blue-700 active:scale-95">
+                Start Next Level
+            </button>
+        </div>
+    </div>
+
     <div id="victoryScreen" class="overlay hidden">
         <div class="w-[90%] max-w-md rounded-xl border-4 border-blue-500 bg-white p-8 text-center shadow-2xl">
             <h1 class="mb-4 text-6xl">🏆</h1>
@@ -191,6 +213,7 @@
         const ui = {
             startScreen: document.getElementById("startScreen"),
             gameOverScreen: document.getElementById("gameOverScreen"),
+            promotionScreen: document.getElementById("promotionScreen"),
             victoryScreen: document.getElementById("victoryScreen"),
             hud: document.getElementById("hud"),
             dayDisplay: document.getElementById("dayDisplay"),
@@ -202,12 +225,16 @@
             careerText: document.getElementById("careerText"),
             finalScore: document.getElementById("finalScore"),
             finalTitle: document.getElementById("finalTitle"),
+            promotionTitle: document.getElementById("promotionTitle"),
+            promotionBlurb: document.getElementById("promotionBlurb"),
+            promotionDetails: document.getElementById("promotionDetails"),
             winScore: document.getElementById("winScore"),
             winTitle: document.getElementById("winTitle"),
             winTime: document.getElementById("winTime"),
             startBtn: document.getElementById("startBtn"),
             restartBtn: document.getElementById("restartBtn"),
             pauseBtn: document.getElementById("pauseBtn"),
+            promotionBtn: document.getElementById("promotionBtn"),
             winRestartBtn: document.getElementById("winRestartBtn")
         };
 
@@ -220,9 +247,19 @@
         const ISSUE_TIME_SCALE = 1.4;
         const PRODUCTIVITY_DRAIN_SCALE = 0.5;
         const PRODUCTIVITY_FIX_BONUS = 6;
-        const PROMOTION_TITLES = ["Intern", "Assistant Manager", "Team Lead", "Director", "Vice President", "President", "CEO"];
+        const LEVELS = [
+            { title: "Intern", blurb: "Warm-up floor with longer focus times.", issueDelayMultiplier: 1.08, drainMultiplier: 0.86, issueCap: 2 },
+            { title: "Assistant Manager", blurb: "A little busier, but still forgiving.", issueDelayMultiplier: 1.02, drainMultiplier: 0.92, issueCap: 2 },
+            { title: "Team Lead", blurb: "Steady baby chaos starts rolling in.", issueDelayMultiplier: 0.97, drainMultiplier: 1.0, issueCap: 3 },
+            { title: "Director", blurb: "More tiny meetings, more tiny meltdowns.", issueDelayMultiplier: 0.92, drainMultiplier: 1.06, issueCap: 3 },
+            { title: "Vice President", blurb: "Babies lose focus faster now.", issueDelayMultiplier: 0.87, drainMultiplier: 1.12, issueCap: 3 },
+            { title: "President", blurb: "Last floor before CEO. Stay sharp.", issueDelayMultiplier: 0.82, drainMultiplier: 1.18, issueCap: 4 },
+            { title: "CEO", blurb: "You run the whole company now.", issueDelayMultiplier: 0.82, drainMultiplier: 1.18, issueCap: 4 }
+        ];
         const CEO_TARGET_TIME = 180000;
-        const PROMOTION_INTERVAL = CEO_TARGET_TIME / (PROMOTION_TITLES.length - 1);
+        const FINAL_TITLE_INDEX = LEVELS.length - 1;
+        const LAST_PLAYABLE_LEVEL_INDEX = FINAL_TITLE_INDEX - 1;
+        const PROMOTION_INTERVAL = CEO_TARGET_TIME / FINAL_TITLE_INDEX;
 
         let officeBounds = {};
         let screenBounds = {};
@@ -457,14 +494,15 @@
             }
 
             getNextDistractionDelay(initial = false) {
-                const baseDelay = Math.max(13000, 20000 - (day - 1) * 900) * ISSUE_TIME_SCALE;
-                const variance = 7000 * ISSUE_TIME_SCALE;
-                const delay = Math.max(5000 * ISSUE_TIME_SCALE, baseDelay + (Math.random() * variance * 2 - variance));
+                const level = getLevelConfig();
+                const baseDelay = 20000 * ISSUE_TIME_SCALE * level.issueDelayMultiplier;
+                const variance = 7000 * ISSUE_TIME_SCALE * Math.max(0.75, level.issueDelayMultiplier);
+                const delay = Math.max(6500 * ISSUE_TIME_SCALE, baseDelay + (Math.random() * variance * 2 - variance));
                 return initial ? Math.random() * delay : delay;
             }
 
             getRetryDelay() {
-                return (2500 + Math.random() * 2500) * ISSUE_TIME_SCALE;
+                return (2200 + Math.random() * 1800) * ISSUE_TIME_SCALE * getLevelConfig().issueDelayMultiplier;
             }
 
             distract(silent = false) {
@@ -496,9 +534,10 @@
                     }
                 } else {
                     let drainRate = 0;
-                    if (this.state === "playing") drainRate = 0.002 * PRODUCTIVITY_DRAIN_SCALE;
-                    if (this.state === "sleeping") drainRate = 0.003 * PRODUCTIVITY_DRAIN_SCALE;
-                    if (this.state === "crying") drainRate = 0.005 * PRODUCTIVITY_DRAIN_SCALE;
+                    const levelDrainScale = getLevelConfig().drainMultiplier;
+                    if (this.state === "playing") drainRate = 0.002 * PRODUCTIVITY_DRAIN_SCALE * levelDrainScale;
+                    if (this.state === "sleeping") drainRate = 0.003 * PRODUCTIVITY_DRAIN_SCALE * levelDrainScale;
+                    if (this.state === "crying") drainRate = 0.005 * PRODUCTIVITY_DRAIN_SCALE * levelDrainScale;
 
                     productivity -= deltaTime * drainRate;
                 }
@@ -603,7 +642,7 @@
         }
 
         function getIssueCap() {
-            return Math.max(2, Math.min(5, Math.floor(workers.length * 0.14) + Math.floor((day - 1) / 2)));
+            return Math.min(workers.length, getLevelConfig().issueCap);
         }
 
         function seedStartingDistractions() {
@@ -622,21 +661,78 @@
             return `${minutes}:${String(seconds).padStart(2, "0")}`;
         }
 
+        function getLevelConfig(index = titleIndex) {
+            return LEVELS[Math.min(index, LAST_PLAYABLE_LEVEL_INDEX)];
+        }
+
         function getPromotionLabel(index = titleIndex) {
-            return `Level ${index + 1} • ${PROMOTION_TITLES[index]}`;
+            return `Level ${index + 1} • ${LEVELS[index].title}`;
+        }
+
+        function getLevelSummary(index = titleIndex) {
+            const level = getLevelConfig(index);
+            let pace = "longer breaks between baby problems";
+            if (level.issueDelayMultiplier < 0.9) {
+                pace = "shorter breaks between baby problems";
+            } else if (level.issueDelayMultiplier < 1) {
+                pace = "a steadier stream of baby problems";
+            }
+            return `${level.blurb} ${pace}. Up to ${level.issueCap} distracted babies at once.`;
+        }
+
+        function resetPlayerForLevel() {
+            if (!player) return;
+            player.x = officeBounds.width / 2;
+            player.y = officeBounds.height / 2;
+            player.vx = 0;
+            player.vy = 0;
+            player.trail = [];
+            player.speech.timer = 0;
+        }
+
+        function resetWorkersForLevel(isNewGame = false) {
+            workers.forEach((worker) => {
+                worker.state = "working";
+                worker.currentWorkEmoji = worker.workEmojis[Math.floor(Math.random() * worker.workEmojis.length)];
+                worker.distractionTimer = isNewGame ? worker.getNextDistractionDelay(true) : Math.max(4000, worker.getNextDistractionDelay(true));
+            });
+        }
+
+        function prepareLevelStart(isNewGame = false) {
+            productivity = 100;
+            particles = [];
+            resetPlayerForLevel();
+            resetWorkersForLevel(isNewGame);
+            if (isNewGame) {
+                seedStartingDistractions();
+            }
+        }
+
+        function showPromotionScreen() {
+            ui.promotionTitle.innerText = getPromotionLabel();
+            ui.promotionBlurb.innerText = getLevelConfig().blurb;
+            ui.promotionDetails.innerText = getLevelSummary();
+            ui.promotionBtn.innerText = `Start ${LEVELS[titleIndex].title} Level`;
+            ui.promotionScreen.classList.remove("hidden");
         }
 
         function handlePromotion() {
             titleIndex += 1;
-            productivity = Math.min(100, productivity + 10);
-            particles.push(new Particle(player.x, player.y - 50, `PROMOTED: ${PROMOTION_TITLES[titleIndex]}!`, "#2563eb"));
+            prepareLevelStart();
+            particles.push(new Particle(player.x, player.y - 50, `PROMOTED: ${LEVELS[titleIndex].title}!`, "#2563eb"));
             player.speak();
+            gameState = "PROMOTION";
+            input.pointer.active = false;
+            showPromotionScreen();
         }
 
-        function updateCareerProgress() {
-            while (titleIndex < PROMOTION_TITLES.length - 1 && careerTime >= (titleIndex + 1) * PROMOTION_INTERVAL) {
-                handlePromotion();
-            }
+        function continueAfterPromotion() {
+            if (gameState !== "PROMOTION") return;
+            ui.promotionScreen.classList.add("hidden");
+            gameState = "PLAYING";
+            updateHUD();
+            lastTime = performance.now();
+            animationId = requestAnimationFrame(gameLoop);
         }
 
         function finishVictory() {
@@ -644,7 +740,7 @@
             ui.hud.classList.add("hidden");
             ui.victoryScreen.classList.remove("hidden");
             ui.winScore.innerText = Math.floor(profits).toLocaleString();
-            ui.winTitle.innerText = getPromotionLabel(PROMOTION_TITLES.length - 1);
+            ui.winTitle.innerText = getPromotionLabel(FINAL_TITLE_INDEX);
             ui.winTime.innerText = formatTime(careerTime);
             input.pointer.active = false;
         }
@@ -658,11 +754,11 @@
             titleIndex = 0;
             resize();
             player = new BossPlayer();
-            particles = [];
-            seedStartingDistractions();
+            prepareLevelStart(true);
             
             ui.startScreen.classList.add("hidden");
             ui.gameOverScreen.classList.add("hidden");
+            ui.promotionScreen.classList.add("hidden");
             ui.victoryScreen.classList.add("hidden");
             ui.hud.classList.remove("hidden");
             ui.pauseBtn.textContent = "⏸️ Pause";
@@ -683,14 +779,14 @@
             ui.prodMeter.style.width = `${productivity}%`;
             ui.prodText.innerText = `${Math.floor(productivity)}%`;
 
-            const isAtTopTitle = titleIndex === PROMOTION_TITLES.length - 1;
+            const isAtTopTitle = titleIndex === FINAL_TITLE_INDEX;
             if (isAtTopTitle) {
                 ui.careerMeter.style.width = "100%";
                 ui.careerText.innerText = "CEO reached!";
             } else {
                 const levelStart = titleIndex * PROMOTION_INTERVAL;
                 const levelProgress = ((careerTime - levelStart) / PROMOTION_INTERVAL) * 100;
-                const nextTitle = PROMOTION_TITLES[titleIndex + 1];
+                const nextTitle = LEVELS[titleIndex + 1].title;
                 ui.careerMeter.style.width = `${Math.max(0, Math.min(100, levelProgress))}%`;
                 ui.careerText.innerText = `Next: ${nextTitle} • ${formatTime((titleIndex + 1) * PROMOTION_INTERVAL - careerTime)}`;
             }
@@ -784,15 +880,43 @@
             if (gameState !== "PLAYING") return;
 
             const deltaTime = timestamp - lastTime;
+            const safeDeltaTime = Math.min(deltaTime, 40);
             lastTime = timestamp;
 
-            dayTimer += deltaTime;
+            careerTime += safeDeltaTime;
+            if (titleIndex < LAST_PLAYABLE_LEVEL_INDEX && careerTime >= (titleIndex + 1) * PROMOTION_INTERVAL) {
+                handlePromotion();
+                updateHUD();
+                drawEnvironment();
+                workers.forEach((worker) => worker.draw(ctx));
+                player.draw(ctx);
+                particles.forEach((particle) => particle.draw(ctx));
+                return;
+            }
+
+            if (careerTime >= CEO_TARGET_TIME) {
+                finishVictory();
+                return;
+            }
+
+            dayTimer += safeDeltaTime;
             if (dayTimer > 15000) {
                 day += 1;
                 dayTimer = 0;
-                particles.push(new Particle(player.x, player.y - 40, "NEW DAY! Faster pace!", "#3b82f6"));
-                productivity = Math.min(100, productivity + 20);
+                particles.push(new Particle(player.x, player.y - 40, "NEW DAY! Keep climbing!", "#3b82f6"));
+                productivity = Math.min(100, productivity + 15);
             }
+
+            player.update(safeDeltaTime);
+            workers.forEach((worker) => worker.update(safeDeltaTime));
+
+            for (let index = particles.length - 1; index >= 0; index -= 1) {
+                particles[index].update();
+                if (particles[index].life <= 0) particles.splice(index, 1);
+            }
+
+            checkInteractions();
+            updateHUD();
 
             if (productivity <= 0) {
                 gameState = "GAMEOVER";
@@ -804,25 +928,6 @@
                 return;
             }
 
-            careerTime += deltaTime;
-            updateCareerProgress();
-
-            if (careerTime >= CEO_TARGET_TIME) {
-                finishVictory();
-                return;
-            }
-
-            player.update(deltaTime);
-            workers.forEach((worker) => worker.update(deltaTime));
-
-            for (let index = particles.length - 1; index >= 0; index -= 1) {
-                particles[index].update();
-                if (particles[index].life <= 0) particles.splice(index, 1);
-            }
-
-            checkInteractions();
-            updateHUD();
-
             drawEnvironment();
             workers.forEach((worker) => worker.draw(ctx));
             player.draw(ctx);
@@ -833,6 +938,7 @@
 
         ui.startBtn.addEventListener("click", initGame);
         ui.restartBtn.addEventListener("click", initGame);
+        ui.promotionBtn.addEventListener("click", continueAfterPromotion);
         ui.winRestartBtn.addEventListener("click", initGame);
         ui.pauseBtn.addEventListener("click", () => {
             if (gameState === "PLAYING") {
